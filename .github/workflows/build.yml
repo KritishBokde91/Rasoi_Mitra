@@ -1,145 +1,129 @@
 name: Flutter CI/CD
 
+# Trigger the workflow on push to main/master branch and pull requests
 on:
   push:
-    branches:
-      - main
+    branches: [ main, master ]
   pull_request:
-    branches:
-      - main
+    branches: [ main, master ]
 
 jobs:
+  # Job for building Android APK
   build-android:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
+      # Checkout the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Java for Android
-      - name: Set up JDK
+      # Setup Java 17 (required for Flutter Android builds)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
+          distribution: 'zulu'
           java-version: '17'
-          distribution: 'temurin'
 
-      # Set up Flutter
-      - name: Set up Flutter
+      # Setup Flutter SDK
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0' # Use your preferred Flutter version
           channel: 'stable'
 
-      # Install dependencies
+      # Get Flutter dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Run tests
+      # Run tests (optional but recommended)
       - name: Run tests
         run: flutter test
 
-      # Build APK for Android
+      # Build APK
       - name: Build APK
         run: flutter build apk --release
 
-      # Build Android App Bundle (AAB)
-      - name: Build AAB
-        run: flutter build appbundle --release
-
-      # Upload Android artifacts
+      # Upload APK as artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-aab
-          path: build/app/outputs/bundle/release/app-release.aab
-
+  # Job for building iOS IPA
   build-ios:
     runs-on: macos-latest
 
     steps:
-      # Checkout the code
+      # Checkout the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Flutter
-      - name: Set up Flutter
+      # Setup Flutter SDK
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0' # Use your preferred Flutter version
           channel: 'stable'
 
-      # Install dependencies
+      # Get Flutter dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Run tests
+      # Run tests (optional but recommended)
       - name: Run tests
         run: flutter test
 
-      # Build iOS app
+      # Build iOS (without signing for basic builds)
       - name: Build iOS
-        run: |
-          flutter build ios --release --no-codesign
-          cd build/ios/iphoneos
-          mkdir Payload
-          mv Runner.app Payload/
-          zip -r app.ipa Payload
+        run: flutter build ios --release --no-codesign
 
-      # Upload iOS artifact
+      # Optional: If you have certificates and provisioning profiles
+      # You would add code signing steps here
+
+      # Create IPA (this is a simplified version without proper signing)
+      - name: Create IPA
+        run: |
+          mkdir -p build/ios/ipa
+          cd build/ios/iphoneos
+          zip -r ../ipa/app.ipa Runner.app
+
+      # Upload IPA as artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: build/ios/iphoneos/app.ipa
+          path: build/ios/ipa/app.ipa
 
-  release:
+  # Optional: Deploy to Firebase App Distribution or other services
+  deploy:
     needs: [build-android, build-ios]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' # Only deploy from main branch
 
     steps:
-      # Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download Android artifacts
-      - name: Download Android artifacts
+      # Download built artifacts
+      - name: Download Android APK
         uses: actions/download-artifact@v4
         with:
           name: android-apk
-          path: build/android
+          path: ./artifacts
 
-      - name: Download Android AAB
-        uses: actions/download-artifact@v4
-        with:
-          name: android-aab
-          path: build/android
-
-      # Download iOS artifact
-      - name: Download iOS artifact
+      - name: Download iOS IPA
         uses: actions/download-artifact@v4
         with:
           name: ios-ipa
-          path: build/ios
+          path: ./artifacts
 
-      # Create a GitHub release
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
-          draft: false
-          prerelease: false
-          files: |
-            build/android/app-release.apk
-            build/android/app-release.aab
-            build/ios/app.ipa
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # Here you can add deployment steps
+    # For example, deploy to Firebase App Distribution:
+    # - name: Deploy to Firebase App Distribution
+    #   uses: wzieba/Firebase-Distribution-Github-Action@v1
+    #   with:
+    #     appId: ${{secrets.FIREBASE_APP_ID}}
+    #     serviceCredentialsFileContent: ${{secrets.CREDENTIAL_FILE_CONTENT}}
+    #     groups: testers
+    #     file: ./artifacts/app-release.apk
