@@ -1,0 +1,145 @@
+name: Flutter CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Java for Android
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Set up Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Run tests
+      - name: Run tests
+        run: flutter test
+
+      # Build APK for Android
+      - name: Build APK
+        run: flutter build apk --release
+
+      # Build Android App Bundle (AAB)
+      - name: Build AAB
+        run: flutter build appbundle --release
+
+      # Upload Android artifacts
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Run tests
+      - name: Run tests
+        run: flutter test
+
+      # Build iOS app
+      - name: Build iOS
+        run: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -r app.ipa Payload
+
+      # Upload iOS artifact
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ios/iphoneos/app.ipa
+
+  release:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Checkout the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download Android artifacts
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: build/android
+
+      - name: Download Android AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: android-aab
+          path: build/android
+
+      # Download iOS artifact
+      - name: Download iOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ios
+
+      # Create a GitHub release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            build/android/app-release.apk
+            build/android/app-release.aab
+            build/ios/app.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
