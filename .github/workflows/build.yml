@@ -1,6 +1,5 @@
 name: Flutter CI/CD
 
-# Trigger the workflow on push to main/master branch and pull requests
 on:
   push:
     branches: [ master ]
@@ -8,104 +7,89 @@ on:
     branches: [ master ]
 
 jobs:
-  # Job for building Android APK
   build-android:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Java 17 (required for Flutter Android builds)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # Setup Flutter SDK
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.2' # Updated to include Dart 3.9.0+
+          flutter-version: '3.35.2'
           channel: 'stable'
 
-      # Get Flutter dependencies
+      - name: Create .env file
+        run: |
+          echo "GET_ADDRESS_URL=https://nominatim.openstreetmap.org/reverse?format=json" > .env
+          # Add other environment variables as needed
+          # echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+
       - name: Install dependencies
         run: flutter pub get
 
-      # Run tests (optional but recommended)
       - name: Run tests
         run: flutter test
 
-      # Build APK
       - name: Build APK
         run: flutter build apk --release
 
-      # Upload APK as artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-  # Job for building iOS IPA
   build-ios:
     runs-on: macos-latest
 
     steps:
-      # Checkout the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Flutter SDK
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.2' # Updated to include Dart 3.9.0+
+          flutter-version: '3.35.2'
           channel: 'stable'
 
-      # Get Flutter dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Run tests (optional but recommended)
       - name: Run tests
         run: flutter test
 
-      # Build iOS (without signing for basic builds)
       - name: Build iOS
         run: flutter build ios --release --no-codesign
 
-      # Optional: If you have certificates and provisioning profiles
-      # You would add code signing steps here
-
-      # Create IPA (this is a simplified version without proper signing)
       - name: Create IPA
         run: |
           mkdir -p build/ios/ipa
           cd build/ios/iphoneos
           zip -r ../ipa/app.ipa Runner.app
 
-      # Upload IPA as artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/ipa/app.ipa
 
-  # Optional: Deploy to Firebase App Distribution or other services
   deploy:
     needs: [build-android, build-ios]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' # Only deploy from main branch
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download built artifacts
       - name: Download Android APK
         uses: actions/download-artifact@v4
         with:
