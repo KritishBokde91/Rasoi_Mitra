@@ -14,3 +14,9 @@
 -dontwarn androidx.window.sidecar.SidecarProvider
 -dontwarn androidx.window.sidecar.SidecarWindowLayoutInfo
 -keep class com.razorpay.** { *; }
+
+# ----------------- ADD THESE LINES -----------------
+# Rules for Razorpay's Google Pay dependency
+-keep class com.google.android.apps.nbu.paisa.inapp.client.api.** {*;}
+-dontwarn com.google.android.apps.nbu.paisa.inapp.client.api.**
+# ----------------------------------------------------
