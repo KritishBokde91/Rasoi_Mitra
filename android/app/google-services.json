@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "285142466017",
+    "project_id": "rasoi-mitra",
+    "storage_bucket": "rasoi-mitra.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:285142466017:android:085c89b747260284e126a0",
+        "android_client_info": {
+          "package_name": "com.rasoi.mitra.rasoi_mitra2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj2nDtDAhqhLrJP_9Fe63woP4YBATt-60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
