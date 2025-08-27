@@ -5,15 +5,6 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-signingConfigs {
-    create("release") {
-        storeFile = file("android/app/rasoi-mitra-key.jks")
-        storePassword = System.getenv("STORE_PASSWORD") ?: "RasoiMitra@YCCE"
-        keyAlias = "rasoi-mitra-alias"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: "RasoiMitra@YCCE"
-    }
-}
-
 android {
     namespace = "com.rasoi.mitra.rasoi_mitra2"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +19,15 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    signingConfigs {
+        register("release") {
+            storeFile = file("android/app/rasoi-mitra-key.jks")
+            storePassword = System.getenv("STORE_PASSWORD") ?: "RasoiMitra@YCCE"
+            keyAlias = "rasoi-mitra-alias"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "RasoiMitra@YCCE"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.rasoi.mitra.rasoi_mitra2"
         minSdk = flutter.minSdkVersion
@@ -39,12 +39,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            minifyEnabled = true
-            shrinkResources = true
-            proguardFiles += listOf(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
