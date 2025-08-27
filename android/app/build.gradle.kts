@@ -21,7 +21,7 @@ android {
 
     signingConfigs {
         register("release") {
-            storeFile = file("android/app/rasoi-mitra-key.jks")
+            storeFile = file("rasoi-mitra-key.jks")
             storePassword = System.getenv("STORE_PASSWORD") ?: "RasoiMitra@YCCE"
             keyAlias = "rasoi-mitra-alias"
             keyPassword = System.getenv("KEY_PASSWORD") ?: "RasoiMitra@YCCE"
