@@ -1,112 +1,41 @@
-name: Flutter CI/CD
-
 on:
-  push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
-
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+      - develop
+name: "Build & Release"
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
+  build:
+    name: Build & Release
+    runs-on: macos-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+          java-version: '12'
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.2'
           channel: 'stable'
+          architecture: x64
 
-      - name: Create .env file
-        run: |
-          echo "GET_ADDRESS_URL=https://nominatim.openstreetmap.org/reverse?format=json" > .env
-
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/rasoi-mitra-key.jks
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
-        env:
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-  build-ios:
-    runs-on: macos-14
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # ----------------- CHANGE IS HERE -----------------
-      # STEP 1: REMOVE the following line. Do not force Xcode 16.
-      # - name: Setup Xcode version
-      #   run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
-      #   continue-on-error: true
-      # ----------------------------------------------------
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          # STEP 2: Use a recent stable Flutter version
-          flutter-version: '3.24.3' # Changed from 3.35.2
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Install Pods
-        run: |
-          cd ios
-          pod install --repo-update
-        continue-on-error: false
-
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
-
-      - name: Create IPA
-        run: |
-          mkdir -p build/ios/ipa
+      - run: flutter build apk --release --split-per-abi
+      - run: |
+          flutter build ios --no-codesign
           cd build/ios/iphoneos
-          zip -r ../ipa/app.ipa Runner.app
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
+          mkdir Payload
+          cd Payload
+          ln -s ../Runner.app
+          cd ..
+          zip -r app.ipa Payload
+      - name: Push to Releases
+        uses: ncipollo/release-action@v1
         with:
-          name: ios-ipa
-          path: build/ios/ipa/app.ipa
-
-  deploy:
-    needs: [build-android, build-ios]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Android APK
-        uses: actions/download-artifact@v4
-        with:
-          name: android-apk
-          path: ./artifacts
-
-      - name: Download iOS IPA
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-ipa
-          path: ./artifacts
+          artifacts: "build/app/outputs/apk/release/*,build/ios/iphoneos/app.ipa"
+          tag: v1.0.${{ github.run_number }}
+          token: ${{ secrets.TOKEN }}
