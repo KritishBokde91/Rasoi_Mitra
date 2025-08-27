@@ -1,11 +1,17 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+signingConfigs {
+    create("release") {
+        storeFile = file("android/app/rasoi-mitra-key.jks")
+        storePassword = System.getenv("STORE_PASSWORD") ?: "RasoiMitra@YCCE"
+        keyAlias = "rasoi-mitra-alias"
+        keyPassword = System.getenv("KEY_PASSWORD") ?: "RasoiMitra@YCCE"
+    }
 }
 
 android {
@@ -23,10 +29,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.rasoi.mitra.rasoi_mitra2"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,9 +38,13 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles += listOf(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
